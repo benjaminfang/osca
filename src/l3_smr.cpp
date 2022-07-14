@@ -5,7 +5,7 @@
 //  Created by Futao Zhang on 20/11/2017.
 //  Copyright © 2017 Futao Zhang. All rights reserved.
 //
-
+#include <fstream>
 #include "l3_smr.hpp"
 namespace SMR {
 
@@ -835,13 +835,14 @@ namespace SMR {
         for( int i=0;i<cohortnum;i++) V(i,i)=1;
     }
 
-    bool mecs_per_prob(float* buffer_beta,float* buffer_se, long snpnum, long cohortnum,double pmecs,vector<int> &noninvertible, vector<int> &negativedeno, int nmecs)
+    bool mecs_per_prob(float* buffer_beta,float* buffer_se, long snpnum, long cohortnum,double pmecs,vector<int> &noninvertible, vector<int> &negativedeno, int nmecs, std::ofstream &pcc_fout)
     {
 
         MatrixXd Corr(cohortnum,cohortnum);
         //LOGPRINTF("Estimate the cohort correlation using the beta values of pairwised common SNPs.\n");
         //LOGPRINTF("We exclude the significant common SNPs with a p-value threshold %e to estimate the correlation matrix.\n",pmecs);
         bool enoughsnp = pcc(Corr,buffer_beta,buffer_se,snpnum,cohortnum,pmecs, nmecs);
+        pcc_fout << Corr << std::endl;
         if(!enoughsnp) return false;
         //cout<<Corr<<endl;
         #pragma omp parallel for
@@ -1497,7 +1498,7 @@ namespace SMR {
         vector<string> nega_prbs;
         vector<string> snpdeficent;
         double cr=0.0;
-        //FILE * probe_snp_log = fopen("probe_snp_log", "w");
+        std::ofstream probe_pcc_fout("probe_pcc_matrix.txt");
 
         for(int i=0;i<metaPrbNum;i++)
         {
@@ -1508,7 +1509,7 @@ namespace SMR {
             int probebp=probeinfo[i].bp;
             int probechr=probeinfo[i].probechr;
             long cohortnum=0;
-            //fprintf(probe_snp_log, ">%s\n", probeinfo[i].probeId);
+            probe_pcc_fout << ">" << probeinfo[i].probeId << std::endl;
             for(int j=0;j<besds.size();j++)
             {
                 int pid=probeinfo[i].ptr[j];
@@ -1665,7 +1666,7 @@ namespace SMR {
                     //LOGPRINTF("Performing %s analysis of probe %s...\n",analysisType.c_str(), probeinfo[i].probeId);
                     vector<int> noninvertible, negativedeno;
                     LOGPRINTF("Extracted probe %s from %d besd files. now, perform mecs_pre_prob calcualtion.\n", probeinfo[i].probeId, cohortnum);
-                    bool mecsflag = mecs_per_prob( buffer_beta, buffer_se, metaSNPnum, cohortnum, pthresh,noninvertible,negativedeno, nmecs);
+                    bool mecsflag = mecs_per_prob( buffer_beta, buffer_se, metaSNPnum, cohortnum, pthresh,noninvertible,negativedeno, nmecs, probe_pcc_fout);
                     if(!mecsflag) snpdeficent.push_back(probeinfo[i].probeId);
                     else {
                         if(noninvertible.size()>0) {
@@ -1723,6 +1724,8 @@ namespace SMR {
                 cols[i+1<<1]=(real_num<<1)+cols[i<<1];
             }
         }
+
+        probe_pcc_fout.close();
 
         if(label==1)
         {
