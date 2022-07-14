@@ -1498,7 +1498,7 @@ namespace SMR {
         vector<string> nega_prbs;
         vector<string> snpdeficent;
         double cr=0.0;
-        std::ofstream probe_pcc_fout("probe_pcc_matrix.txt");
+        std::ofstream probe_pcc_fout(std::string(outFileName) + "_probe_pcc_matrix.txt");
 
         for(int i=0;i<metaPrbNum;i++)
         {
